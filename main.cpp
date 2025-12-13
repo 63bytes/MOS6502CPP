@@ -1,4 +1,3 @@
-#include "6502.h"
 #include <cstdint>
 #include <iostream>
 
@@ -54,7 +53,7 @@ public:
         uint8_t RAM[MEMORY_MAX] = {};
     }
     void test() {
-        (this->*opcodeData[0x69].func)(21);
+        (this->*OPCODEDATA[0x69].func)(21);
     }
     void Instruction() {
         preExecute();
@@ -100,9 +99,17 @@ private:
         Opcode(OPCODE_FUNCTION a, uint8_t b, AddressingModes c, int d, int e){func = a;opcode = b;addressing_mode=c;cycles=d;bytes=e;}
         Opcode(){}
     };
-    Opcode opcodeData[0xff] = {};
-    void InitOps() {
-        opcodeData[0x69] = Opcode(&CPU::OP_ADC, 0x69, IMM, 2, 2);
+	Opcode currentOP;
+    Opcode OPCODEDATA[0xff] = {};
+    void InitOps() {//!!! add json reader https://stackoverflow.com/questions/32205981/reading-json-files-in-c
+        OPCODEDATA[0x69] = Opcode(&CPU::OP_ADC, 0x69, IMM, 2, 2);
+		OPCODEDATA[0x6D] = Opcode(&CPU::OP_ADC, 0x6D, ABS, 4, 3);
+		OPCODEDATA[0x65] = Opcode(&CPU::OP_ADC, 0x65, ZP, 3, 2);
+		OPCODEDATA[0x61] = Opcode(&CPU::OP_ADC, 0x61, INDX, 6, 2);
+		OPCODEDATA[0x71] = Opcode(&CPU::OP_ADC, 0x71, INDY, 5, 2);
+		OPCODEDATA[0x75] = Opcode(&CPU::OP_ADC, 0x75, ZPX, 4, 2);
+		OPCODEDATA[0x7D] = Opcode(&CPU::OP_ADC, 0x7D, ABX, 4, 3);
+		OPCODEDATA[0x79] = Opcode(&CPU::OP_ADC, 0x79, ABY, 4, 3);
     }
 
     uint8_t fetch(const bool Increment = true) {
@@ -123,23 +130,25 @@ private:
     uint8_t ADL;//Adress low
     uint8_t ADH;//Adress high
     uint8_t DATA;
-    uint8_t BAL;
+    uint8_t BAL;//base addresss
     uint8_t BAH;
     uint8_t OFFSET;
+	uint16_t EFA;//effective address
     void preExecute() {
         OP = fetch();
-        switch (opcodeData[OP].addressing_mode) {
+		currentOP = OPCODEDATA[OP];
+        switch (currentOP.addressing_mode) {
             case IMM:
                 DATA = fetch();
                 break;
             case ABS:
                 ADL = fetch();
                 ADH = fetch();
-                DATA = read((ADH << 8) | ADL);
+                DATA = (ADH<<8) | ADL;
                 break;
             case ZP:
                 ADL = fetch();
-                DATA = read(ADL);
+                DATA = ADL;
                 break;
             case ACC://No logic needed
                 DATA = 0;
@@ -152,24 +161,24 @@ private:
                 IAL += X;//Index zero page with X
                 ADL = read(IAL);
                 ADH = read(IAL+1);
-                DATA = read((ADH<<8) | ADL);
+                DATA = (ADH<<8) | ADL;
             case INDY://Pointer to a list (ZP)
                 IAL = fetch();
                 BAL = read(IAL);
                 BAH = read(IAL+1);
-                DATA = read((BAH<<8) | BAL+1);
+                DATA = (ADH<<8) | ADL;
             case ZPX://Zero page list
                 BAL = fetch();
                 BAL += X;
-                DATA = read(BAL);
+                DATA = BAL;
             case ABX:
                 BAL = fetch() + X;
                 BAH = fetch();
-                DATA = read((BAH<<8) | BAL);
+                DATA = (BAH<<8) | BAL;
             case ABY:
                 BAL = fetch() + Y;
                 BAH = fetch();
-                DATA = read((BAH<<8) | BAL);
+                DATA = (BAH<<8) | BAL;
             case REL:
                 OFFSET = fetch();
                 DATA = OFFSET;
@@ -177,33 +186,38 @@ private:
                 IAL = fetch();
                 ADL = read(IAL);
                 ADH = read(IAL+1);
-                DATA = read((ADH<<8) | ADL);
+                DATA = (ADH<<8) | ADL;
             case ZPY:
                 BAL = fetch();
                 BAL += X;
-                DATA = read(BAL);
+                DATA = BAL;
         }
     }
 
     void execute() {
-        (this->*opcodeData[OP].func)(DATA);
+        (this->*OPCODEDATA[OP].func)(DATA);
     }
-
+    uint8_t result;
     void OP_ADC(const uint16_t o) {
-        const uint8_t n = o;
+		if (currentOP.addressing_mode==(IMM)){
+			const uint8_t n = o;
+		}
+		else {
+			const uint8_t n = read(o);//read from effective address
+		};
         const int s = A & SIGN_BIT;
-        uint8_t result = A + n;
+        result = A + o;
         if ((P & D) == D) {
             if ((result & 0x0F) > 0x09) {
                 result += 0x06;
-            }
+            };
             if ((result & 0xF0) > 0x90) {
                 result += 0x60;
                 C = true;
             }
             else {
                 C = false;
-            }
+            };
             A = result;
         }
         else {
@@ -214,9 +228,51 @@ private:
         Z = A == 0;
         std::cout << "[EXECUTE] ADC" << std::endl;
     }
+	void OP_AND(const uint8_t o) {
+		if (currentOP.addressing_mode==(IMM)){
+			const uint8_t n = o;
+		}
+		else {
+			const uint8_t n = read(o);//read from effective address
+		};
+		A &= o;
+		Z = A==0;
+		N = (A&SIGN_BIT) == SIGN_BIT;
+	}
+	void OP_ASL(const uint8_t o) {
+		if (OPCODEDATA[OP].addressing_mode==ACC){
+			C = (N&SIGN_BIT)==SIGN_BIT;
+			A << 1;
+			N = (N&SIGN_BIT)==SIGN_BIT;
+			Z = N==0;
+		}
+		else {
+			C = (RAM[o]&SIGN_BIT)==SIGN_BIT;
+			RAM[o] << 1;
+			N = (RAM[o]&SIGN_BIT)==SIGN_BIT;
+			Z = RAM[o]==0;
+		};
+	};
+	void OP_BCC(const uint8_t o) {
+		if (C==false) {
+			PC += o;//brach if carry reset
+		}
+	};
+	void OP_BCS(const uint8_t o) {
+		if (C) {
+			PC += o;//brach if carry reset
+		}
+	};
+	void OP_BEQ(const uint8_t o) {
+		if (Z) {
+			PC += o;
+		}
+	}
+	void OP_BIT(const uint8_t o) {
+		const uint8_t n =  RAM[o];
+		N = (n&SIGN_BIT)==SIGN_BIT;
+		V = (n&0b01000000)==0b01000000;
+		result = A & n;
+		Z = result==0;
+	}
 };
-
-int main() {
-    CPU c;
-    return 0;
-}
