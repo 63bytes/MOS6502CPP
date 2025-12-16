@@ -378,5 +378,22 @@ private:
 		Z = A==0;
 		N = (A&SIGN_BIT)==SIGN_BIT;
 	}
-
+	void OP_INC(const INSTRUCTION_OPHAND d) {
+		RAM[d.address] ++;
+		N = (N&SIGN_BIT)==SIGN_BIT;
+		Z = N==0;
+	}
+	void OP_INX(const INSTRUCTION_OPHAND d) {
+		X ++;
+		N = (X&SIGN_BIT)==SIGN_BIT;
+		Z = X==0;
+	}
+	void OP_INY(const INSTRUCTION_OPHAND d) {
+		Y ++;
+		N = (Y&SIGN_BIT)==SIGN_BIT;
+		Z = Y==0;
+	}
+	void OP_JMP(const INSTRUCTION_OPHAND d) {
+		PC = d.value;
+	}
 };
