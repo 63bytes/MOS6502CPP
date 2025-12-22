@@ -9,6 +9,7 @@ uint16_t constexpr STACK_PAGE = 0x0100;
 uint8_t constexpr HIGH = 0xff00;
 uint8_t constexpr LOW = 0x00ff;
 uint16_t constexpr BREAK_ADDR = 0xFFFE;
+uint8_t constexpr LSB = 0b00000001;
 
 uint8_t signedsub8(uint8_t a, uint8_t b) {
 	return a + (~b + 1);
@@ -53,11 +54,10 @@ enum AddressingModes {
     ZPY
 };
 
-class CPU {
+
+
+class mos6502 {
 public:
-    CPU() {
-        InitOps();
-    }
     static void reset() {
         uint8_t RAM[MEMORY_MAX] = {};
     }
@@ -75,7 +75,7 @@ private:
 		bool hasValue=true;
 		bool hasAddress=true;
 	};
-	using OPCODE_FUNCTION = void(CPU::*)(INSTRUCTION_OPHAND);
+	using OPCODE_FUNCTION = void(mos6502::*)(INSTRUCTION_OPHAND);
 	struct Opcode {
 		OPCODE_FUNCTION func;
 		uint8_t opcode;
@@ -110,8 +110,6 @@ private:
     ProgramFlag Z = ProgramFlag(S, ZI);
     ProgramFlag C = ProgramFlag(S, CI);
 
-
-
     uint8_t OP = 0;
     uint16_t operand = 0;
 
@@ -119,16 +117,6 @@ private:
 
 	Opcode currentOP;
     Opcode OPCODEDATA[0xff] = {};
-    void InitOps() {//!!! add json reader https://stackoverflow.com/questions/32205981/reading-json-files-in-c
-        OPCODEDATA[0x69] = Opcode(&CPU::OP_ADC, 0x69, IMM, 2, 2);
-		OPCODEDATA[0x6D] = Opcode(&CPU::OP_ADC, 0x6D, ABS, 4, 3);
-		OPCODEDATA[0x65] = Opcode(&CPU::OP_ADC, 0x65, ZP, 3, 2);
-		OPCODEDATA[0x61] = Opcode(&CPU::OP_ADC, 0x61, INDX, 6, 2);
-		OPCODEDATA[0x71] = Opcode(&CPU::OP_ADC, 0x71, INDY, 5, 2);
-		OPCODEDATA[0x75] = Opcode(&CPU::OP_ADC, 0x75, ZPX, 4, 2);
-		OPCODEDATA[0x7D] = Opcode(&CPU::OP_ADC, 0x7D, ABX, 4, 3);
-		OPCODEDATA[0x79] = Opcode(&CPU::OP_ADC, 0x79, ABY, 4, 3);
-    }
 
     uint8_t fetch(const int Increment = 1) {
     	PC += Increment;
@@ -142,10 +130,17 @@ private:
 	void stack_push8(uint8_t value) {
 	    RAM[STACK_PAGE | S] = value;S--;
     }
+	uint8_t stack_pull8(){
+		S++;
+		return RAM[STACK_PAGE | S];
+	}
 	void stack_push16(uint16_t value) {
 	    stack_push8(HIGH & value);
     	stack_push8(LOW & value);
     }
+	uint16_t stack_pulll6() {
+		return (stack_pull8()<<8) | stack_pull8();
+	}
 
     uint8_t IAL;//indirect address low
     uint8_t ADL;//Adress low
@@ -155,6 +150,7 @@ private:
     uint8_t OFFSET;
 	uint16_t EFA;//effective address
 	INSTRUCTION_OPHAND DATA;
+
     void preExecute() {
         OP = fetch();
 		currentOP = OPCODEDATA[OP];
@@ -228,6 +224,7 @@ private:
         (this->*OPCODEDATA[OP].func)(DATA);
     }
     uint8_t result;
+	uint8_t tmp8;
     void OP_ADC(const INSTRUCTION_OPHAND d) {
 		const uint8_t n = d.value;
         const int s = A & SIGN_BIT;
@@ -396,4 +393,108 @@ private:
 	void OP_JMP(const INSTRUCTION_OPHAND d) {
 		PC = d.value;
 	}
+	void OP_JSR(const INSTRUCTION_OPHAND d) {
+		stack_push16(PC);
+		PC = d.value;
+	}
+	void OP_LDA(const INSTRUCTION_OPHAND d) {
+		A = d.value;
+		Z = A==0;
+		N = (A&SIGN_BIT)==SIGN_BIT;
+	}
+	void OP_LDX(const INSTRUCTION_OPHAND d) {
+		X = d.value;
+		Z = A==0;
+		N = (X&SIGN_BIT)==SIGN_BIT;
+	}
+	void OP_LDY(const INSTRUCTION_OPHAND d) {
+		Y = d.value;
+		Z = A==0;
+		N = (Y&SIGN_BIT)==SIGN_BIT;
+	}
+	void OP_LSR(const INSTRUCTION_OPHAND d) {
+		if (currentOP.addressing_mode==ACC) {
+			C = A&LSB;
+			A >> 1;
+		}
+		else {
+			C = RAM[d.address]&LSB;
+			RAM[d.address] >> 1;
+		}
+	}
+	void OP_NOP(const INSTRUCTION_OPHAND d) {};
+	void OP_ORA(const INSTRUCTION_OPHAND d) {
+		A |= d.value;
+		Z = A==0;
+		N = (A&SIGN_BIT)==SIGN_BIT;
+	}
+	void OP_PHA(const INSTRUCTION_OPHAND d) {
+		stack_push16(A);
+	};
+	void OP_PHP(const INSTRUCTION_OPHAND d) {
+		stack_push8(P);
+	}
+	void OP_PLA(const INSTRUCTION_OPHAND d) {
+		A = stack_pulll6();
+		N = (A&SIGN_BIT)==SIGN_BIT;
+		Z = A==0;
+	}
+	void OP_PLP(const INSTRUCTION_OPHAND d) {
+		P = stack_pull8();
+	}
+	void OP_ROL(const INSTRUCTION_OPHAND d) {
+		if (currentOP.addressing_mode==ACC) {
+			if (C){tmp8=1;}else {tmp8=0;};
+			C = A&SIGN_BIT;
+			A << 1;
+			A |= tmp8;
+		}
+		else {
+			if (C){tmp8=1;}else {tmp8=0;};
+			C = RAM[d.address]&SIGN_BIT;
+			RAM[d.address] << 1;
+			RAM[d.address] |= tmp8;
+		}
+	}
+	void OP_ROR(const INSTRUCTION_OPHAND d) {
+		if (C){tmp8=SIGN_BIT;}else {tmp8=0;};
+		C = A&0b00000001;
+		A >> 1;
+		A |= tmp8;
+	}
+	void OP_RTI(const INSTRUCTION_OPHAND d) {
+		P = stack_pull8();
+		PC = stack_pulll6();
+	}
+	void OP_RTS(const INSTRUCTION_OPHAND d) {
+		PC = stack_pulll6();
+	}
+	void OP_SBC(const INSTRUCTION_OPHAND d) {
+		A -= d.value;
+		A -= P&CI;
+	}
+	void OP_SEC(const INSTRUCTION_OPHAND d) {
+		C = true;
+	}
+	void OP_SED(const INSTRUCTION_OPHAND d) {
+		D = true;
+	}
+	void OP_SEI(const INSTRUCTION_OPHAND d) {
+
+	}
 };
+
+mos6502::mos6502() {
+	//Data bus, accumulator and arithmetic unit
+	//	LDA - Load Accumulator with Memory
+	//	ADC - Add Memory with Carry to Accumulator
+	OPCODEDATA[0x69] = Opcode(&mos6502::OP_ADC, 0x69, IMM, 2, 2);
+	OPCODEDATA[0x6D] = Opcode(&mos6502::OP_ADC, 0x6D, ABS, 4, 3);
+	OPCODEDATA[0x65] = Opcode(&mos6502::OP_ADC, 0x65, ZP, 3, 2);
+	OPCODEDATA[0x61] = Opcode(&mos6502::OP_ADC, 0x61, INDX, 6, 2);
+	OPCODEDATA[0x71] = Opcode(&mos6502::OP_ADC, 0x71, INDY, 5, 2);
+	OPCODEDATA[0x75] = Opcode(&mos6502::OP_ADC, 0x75, ZPX, 4, 2);
+	OPCODEDATA[0x7D] = Opcode(&mos6502::OP_ADC, 0x7D, ABX, 4, 3);
+	OPCODEDATA[0x79] = Opcode(&mos6502::OP_ADC, 0x79, ABY, 4, 3);
+}
+}
