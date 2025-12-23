@@ -24,7 +24,6 @@ uint8_t mos6502::fetch() {
 void mos6502::execute() {
     OP = fetch();
     OPData = instr_table[OP];
-    std::cout << static_cast<int>(OP) << std::endl;
     (this->*OPData.op_func)((this->*OPData.addr_func)());
 }
 
@@ -55,7 +54,7 @@ mos6502::mos6502() {
     for (int i = 0; i < 0xff; i++) {
         MAKE_OPP(i,ILLEGAL,IMP,1,1);
     }
-
+    //region LDA
     //Data bus, Accumulator, Arithmetic unit
     //LDA - Load Accumulator with Memory, M -> A
     MAKE_OPP(0xA9,LDA,IMM,2,2)
@@ -66,7 +65,8 @@ mos6502::mos6502() {
     MAKE_OPP(0xB5,LDA,ZPX,4,2)
     MAKE_OPP(0xBD,LDA,ABX,4,3)
     MAKE_OPP(0xB9,LDA,ABY,4,3)
-
+    //endregion
+    //region STA
     //STA - Store Accumulator in Memory, A -> M
     MAKE_OPP(0x8D,STA,ABS,4,3)
     MAKE_OPP(0x85,STA,ZP,3,2)
@@ -75,7 +75,8 @@ mos6502::mos6502() {
     MAKE_OPP(0x95,STA,ZPX,4,2)
     MAKE_OPP(0x9D,STA,ABX,5,3)
     MAKE_OPP(0x99,STA,ABY,5,3)
-
+    //endregion
+    //region ADC
     //ADC - Add Memory to Accumulator with Carry, M + A + C -> A
     MAKE_OPP(0x69,ADC,IMM,2,2)
     MAKE_OPP(0x6D,ADC,ABS,4,3)
@@ -85,7 +86,8 @@ mos6502::mos6502() {
     MAKE_OPP(0x75,ADC,ZPX,4,2)
     MAKE_OPP(0x7D,ADC,ABX,4,3)
     MAKE_OPP(0x79,ADC,ABY,4,3)
-
+    //endregion
+    //region SBC
     //SBC - Subtract Memory from Accumulator with Borrow A-M-_C_ -> A
     MAKE_OPP(0xE9,SBC,IMM,2,2)
     MAKE_OPP(0xE2,SBC,ABS,4,3)
@@ -95,6 +97,49 @@ mos6502::mos6502() {
     MAKE_OPP(0xF5,SBC,ZPX,4,2)
     MAKE_OPP(0xFD,SBC,ABX,4,3)
     MAKE_OPP(0xF9,SBC,ABY,4,3)
+    //endregion
+    //region AND
+    //AND--Memory with Accumulator A&M -> A
+    MAKE_OPP(0x29,AND,IMM,2,2)
+    MAKE_OPP(0x2D,AND,ABS,4,3)
+    MAKE_OPP(0x25,AND,ZP,3,2)
+    MAKE_OPP(0x21,AND,INDX,6,2)
+    MAKE_OPP(0x31,AND,INDY,5,2)
+    MAKE_OPP(0x35,AND,ZPX,4,2)
+    MAKE_OPP(0x3D,AND,ABX,4,3)
+    MAKE_OPP(0x39,AND,ABY,4,3)
+    //endregion
+    //region ORA
+    //ORA Memory with Accumulator
+    MAKE_OPP(0x09,ORA,IMM,2,2)
+    MAKE_OPP(0x0D,ORA,ABS,4,3)
+    MAKE_OPP(0x05,ORA,ZP,3,2)
+    MAKE_OPP(0x01,ORA,INDX,6,2)
+    MAKE_OPP(0x11,ORA,INDY,5,2)
+    MAKE_OPP(0x15,ORA,ZPX,4,2)
+    MAKE_OPP(0x1D,ORA,ABX,4,3)
+    MAKE_OPP(0x19,ORA,ABY,4,3)
+    //endregion
+    //region EOR
+    //EOR--"Exclusive OR" Memory with Accumulator
+    MAKE_OPP(0x49,EOR,IMM,2,2)
+    MAKE_OPP(0x4D,EOR,ABS,4,3)
+    MAKE_OPP(0x45,EOR,ZP,3,2)
+    MAKE_OPP(0x41,EOR,INDX,6,2)
+    MAKE_OPP(0x51,EOR,INDY,5,2)
+    MAKE_OPP(0x55,EOR,ZPX,4,2)
+    MAKE_OPP(0x5D,EOR,ABX,4,3)
+    MAKE_OPP(0x59,EOR,ABY,4,3)
+    //endregion
+    //region Flags
+    MAKE_OPP(0x38,SEC,IMP,2,1)//SEC - Set Carry Flag
+    MAKE_OPP(0x18,CLC,IMP,2,1)//CLC - Clear Carry Flag
+    MAKE_OPP(0x78,SEI,IMP,2,1) //SEI - Set Interrupt Disable
+    MAKE_OPP(0x58,CLI,IMP,2,1)//CLI - Clear Interrupt Disable
+    MAKE_OPP(0xF8,SED,IMP,2,1)//SED - Set Decimal Mode
+    MAKE_OPP(0xD8,CLD,IMP,2,2)//CLD - Clear Decimal Mode
+    MAKE_OPP(0x88,CLV,IMP,2,1)//CLV - Clear Overflow Flag
+    //endregion
 };
 
 //Addressing mode vars
@@ -105,10 +150,9 @@ uint16_t AD;
 
 uint8_t opVal;
 
-//Adressing mode handlers
+//region Adressing mode handlers
 uint8_t* mos6502::Addr_IMM() {
     opVal = fetch();//Does not effect RAM
-    std::cout << static_cast<int>(opVal) << std::endl;
     return &opVal;//pointer to varible
 }
 
@@ -163,12 +207,14 @@ uint8_t* mos6502::Addr_IND() {
 uint8_t* mos6502::Addr_ZPY() {
     return &RAM[fetch()+Y];
 }
-
+//endregion
 //Instructions
 void mos6502::OP_ILLEGAL(uint8_t *) {}
 
 uint8_t last;
 int result;
+
+//region Arithmetic Unit
 void mos6502::OP_LDA(uint8_t* m) {
     A = *m;
     SET_ZERO(A);
@@ -216,6 +262,37 @@ void mos6502::OP_EOR(uint8_t* m) {
     SET_ZERO(A);
     SET_NEGATIVE(A);
 }
+//endregion
+
+//region Flags
+void mos6502::OP_SEC(uint8_t *m) {
+    SET_FLAG(FLAG_C,true);
+}
+
+void mos6502::OP_CLC(uint8_t *m) {
+    SET_FLAG(FLAG_C,false);
+}
+
+void mos6502::OP_SEI(uint8_t *m) {
+    SET_FLAG(FLAG_I,true);
+}
+
+void mos6502::OP_CLI(uint8_t *m) {
+    SET_FLAG(FLAG_I,false);
+}
+
+void mos6502::OP_SED(uint8_t *m) {
+    SET_FLAG(FLAG_D,true);
+}
+
+void mos6502::OP_CLD(uint8_t *m) {
+    SET_FLAG(FLAG_D,false);
+}
+
+void mos6502::OP_CLV(uint8_t *m) {
+    SET_FLAG(FLAG_V,false);
+}
+//endregion
 
 int main() {
     mos6502 cpu;

@@ -73,7 +73,7 @@ private:
     uint8_t OP=0;
 
     //Custom types
-    typedef void OPCODE_F(uint8_t*);
+    typedef void OPCODE_F(uint8_t* m);
     using OPCODE_FP = void(mos6502::*)(uint8_t*);
     using ADDR_FP = uint8_t*(mos6502::*)();
 
@@ -116,7 +116,7 @@ private:
     uint8_t* Addr_ZPY();
 
     //opcode functions
-    OPCODE_F OP_ILLEGAL;
+    static OPCODE_F OP_ILLEGAL;
 
     OPCODE_F OP_LDA;
     OPCODE_F OP_STA;
@@ -125,6 +125,15 @@ private:
     OPCODE_F OP_AND;
     OPCODE_F OP_ORA;
     OPCODE_F OP_EOR;
+
+    OPCODE_F OP_SEC;
+    OPCODE_F OP_CLC;
+    OPCODE_F OP_SEI;
+    OPCODE_F OP_CLI;
+    OPCODE_F OP_SED;
+    OPCODE_F OP_CLD;
+    OPCODE_F OP_CLV;
+
 };
 
 #endif //MOS6502
