@@ -294,6 +294,53 @@ void mos6502::OP_CLV(uint8_t *m) {
 }
 //endregion
 
+//region Branch and Test
+void mos6502::OP_JMP(uint8_t *m) {
+    PC = *m;
+}
+#define BRANCH PC+=static_cast<int8_t>(*m);
+
+void mos6502::OP_BMI(uint8_t *m) {
+    if (N) {BRANCH}
+}
+void mos6502::OP_BPL(uint8_t *m) {
+    if (not N) {BRANCH}
+}
+
+void mos6502::OP_BCC(uint8_t *m) {
+    if (not C) {BRANCH}
+}
+void mos6502::OP_BCS(uint8_t *m) {
+    if (C) {BRANCH}
+}
+void mos6502::OP_BEQ(uint8_t *m) {
+    if (Z) {BRANCH}
+}
+void mos6502::OP_BNE(uint8_t *m) {
+    if  (not Z) {BRANCH}
+}
+void mos6502::OP_BVS(uint8_t *m) {
+    if (V) {BRANCH}
+}
+void mos6502::OP_BVC(uint8_t *m) {
+    if (not V) {BRANCH}
+}
+
+void mos6502::OP_CMP(uint8_t *m) {
+    result = A-*m;
+    SET_ZERO(result);
+    SET_NEGATIVE(result);
+    SET_FLAG(FLAG_C,*m<=A);
+}
+
+void mos6502::OP_BIT(uint8_t *m) {
+    result = A & *m;
+    SET_NEGATIVE(*m);
+    SET_FLAG(FLAG_V,(*m&FLAG_V)==FLAG_V);
+}
+
+//endregion
+
 int main() {
     mos6502 cpu;
     return 0;
