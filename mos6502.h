@@ -1,27 +1,24 @@
-//
-// Created by gilbe on 22/12/2025.
-//
-#include <stdint.h>
+#include <cstdint>
 
 #ifndef MOS6502
 #define MOS6502
 
-const int HIGH = 0xff00;
-const int LOW = UINT8_MAX;
-const int UINT8_S = 0b10000000;
+constexpr int HIGH = 0xff00;
+constexpr int LOW = UINT8_MAX;
+constexpr int UINT8_S = 0b10000000;
 
-const int MEMORY_MAX = 0xffff;
-const int STACK_PAGE = 0x0100;
-const int STACK_START = UINT8_MAX;
-const int PROGRAM_START = 0x0200;
+constexpr int MEMORY_MAX = 0xffff;
+constexpr int STACK_PAGE = 0x0100;
+constexpr int STACK_START = UINT8_MAX;
+constexpr int PROGRAM_START = 0x0200;
 
-const uint8_t FLAG_N = 0b10000000;
-const uint8_t FLAG_V = 0b01000000;
-const uint8_t FLAG_B = 0b00010000;
-const uint8_t FLAG_D = 0b00001000;
-const uint8_t FLAG_I = 0b00000100;
-const uint8_t FLAG_Z = 0b00000010;
-const uint8_t FLAG_C = 0b00000001;
+constexpr uint8_t FLAG_N = 0b10000000;
+constexpr uint8_t FLAG_V = 0b01000000;
+constexpr uint8_t FLAG_B = 0b00010000;
+constexpr uint8_t FLAG_D = 0b00001000;
+constexpr uint8_t FLAG_I = 0b00000100;
+constexpr uint8_t FLAG_Z = 0b00000010;
+constexpr uint8_t FLAG_C = 0b00000001;
 
 class mos6502 {
 public:

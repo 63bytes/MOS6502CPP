@@ -54,13 +54,13 @@ mos6502::mos6502() {
 
     //Illegal opcodes
     for (int i = 0; i < 0xff; i++) {
-        MAKE_OPP(i,ILLEGAL,IMP,1,1);
+        instr_table[i] = INSTR(i, &mos6502::OP_ILLEGAL, &mos6502::Addr_IMP, 1, 1);;
     }
     //region Arith
     //region LDA
     //Data bus, Accumulator, Arithmetic unit
     //LDA - Load Accumulator with Memory, M -> A
-    MAKE_OPP(0xA9,LDA,IMM,2,2)
+    instr_table[0xA9] = INSTR(0xA9, &mos6502::OP_LDA, &mos6502::Addr_IMM, 2, 2 );
     MAKE_OPP(0xAD,LDA,ABS,4,3)
     MAKE_OPP(0xA5,LDA,ZP,3,2)
     MAKE_OPP(0xA1,LDA,INDX,6,2)
@@ -516,10 +516,11 @@ void mos6502::OP_TYA(uint8_t *m) {
 int main() {
     std::cout << "HI" << std::endl;
     std::cout << std::filesystem::current_path() << std::endl;
-    uint8_t byte;
+    uint8_t buffer[255];
     std::ifstream file("ROMS/test", std::ios::binary);
-    while (file.read(reinterpret_cast<char*>(&byte),1)) {
-        std::cout << static_cast<int>(byte) << " ";
+    file.read(reinterpret_cast<char*>(&buffer),1);
+    for (int i=0;i<sizeof(buffer);i++) {
+        std::cout << static_cast<int>(buffer[i]) << std::endl;
     }
     return 0;
 }
