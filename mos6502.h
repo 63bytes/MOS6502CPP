@@ -116,7 +116,7 @@ private:
     uint8_t* Addr_ZPY();
 
     //opcode functions
-    static OPCODE_F OP_ILLEGAL;
+    OPCODE_F OP_ILLEGAL;
 
     OPCODE_F OP_LDA;
     OPCODE_F OP_STA;
@@ -134,6 +134,32 @@ private:
     OPCODE_F OP_CLD;
     OPCODE_F OP_CLV;
 
+    OPCODE_F OP_JMP;
+    OPCODE_F OP_BMI;
+    OPCODE_F OP_BPL;
+    OPCODE_F OP_BCC;
+    OPCODE_F OP_BCS;
+    OPCODE_F OP_BEQ;
+    OPCODE_F OP_BNE;
+    OPCODE_F OP_BVS;
+    OPCODE_F OP_BVC;
+    OPCODE_F OP_CMP;
+    OPCODE_F OP_BIT;
+
+    OPCODE_F OP_LDX;
+    OPCODE_F OP_LDY;
+    OPCODE_F OP_STX;
+    OPCODE_F OP_STY;
+    OPCODE_F OP_INX;
+    OPCODE_F OP_INY;
+    OPCODE_F OP_DEX;
+    OPCODE_F OP_DEY;
+    OPCODE_F OP_CPX;
+    OPCODE_F OP_CPY;
+    OPCODE_F OP_TAX;
+    OPCODE_F OP_TXA;
+    OPCODE_F OP_TAY;
+    OPCODE_F OP_TYA;
 };
 
 #endif //MOS6502

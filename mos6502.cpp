@@ -1,6 +1,8 @@
 #include "mos6502.h"
 #include <iostream>
 #include <stdint.h>
+#include <fstream>
+#include <filesystem>
 
 #define LWHG_CMB(l,h) ((h<<8)|l)
 
@@ -54,6 +56,7 @@ mos6502::mos6502() {
     for (int i = 0; i < 0xff; i++) {
         MAKE_OPP(i,ILLEGAL,IMP,1,1);
     }
+    //region Arith
     //region LDA
     //Data bus, Accumulator, Arithmetic unit
     //LDA - Load Accumulator with Memory, M -> A
@@ -131,6 +134,7 @@ mos6502::mos6502() {
     MAKE_OPP(0x5D,EOR,ABX,4,3)
     MAKE_OPP(0x59,EOR,ABY,4,3)
     //endregion
+    //endregion
     //region Flags
     MAKE_OPP(0x38,SEC,IMP,2,1)//SEC - Set Carry Flag
     MAKE_OPP(0x18,CLC,IMP,2,1)//CLC - Clear Carry Flag
@@ -140,6 +144,88 @@ mos6502::mos6502() {
     MAKE_OPP(0xD8,CLD,IMP,2,2)//CLD - Clear Decimal Mode
     MAKE_OPP(0x88,CLV,IMP,2,1)//CLV - Clear Overflow Flag
     //endregion
+    //region Branch,Test
+    //Branch on...
+    MAKE_OPP(0x30,BMI,REL,2,2)//BMI ...result minus
+    MAKE_OPP(0x10,BPL,REL,2,2)//BPL ...result plus
+    MAKE_OPP(0x90,BCC,REL,2,2)//BCC ...carry clear
+    MAKE_OPP(0xB0,BCS,REL,2,2)//BCS ...carry set
+    MAKE_OPP(0xF0,BEQ,REL,2,2)//BEQ ...result zero
+    MAKE_OPP(0xD0,BNE,REL,2,2)//BNE ...result not zero
+    MAKE_OPP(0x70,BVS,REL,2,2)//BVS ...overflow set
+    MAKE_OPP(0x50,BVS,REL,2,2)//BVC ...overflow clear
+
+    //region CMP
+    //Compare Memory with Accumulator
+    MAKE_OPP(0xC9,CMP,IMM,2,2)
+    MAKE_OPP(0xCD,CMP,ABS,4,3)
+    MAKE_OPP(0xC5,CMP,ZP,3,2)
+    MAKE_OPP(0xC1,CMP,INDX,6,2)
+    MAKE_OPP(0xD1,CMP,INDY,5,2)
+    MAKE_OPP(0xD5,CMP,ZPX,4,2)
+    MAKE_OPP(0xDD,CMP,ABX,4,3)
+    MAKE_OPP(0xD9,CMP,ABY,4,3)
+    //endregion
+    //region BIT
+    //Test Bitis in Memory with Accumulator
+    MAKE_OPP(0x2C,BIT,ABS,4,3)
+    MAKE_OPP(0x24,BIT,ZP,3,2)
+    //endregion
+    //endregion
+    //region Index Registers
+    //region LDX
+    //Load index register x from memory
+    MAKE_OPP(0xA2,LDX,IMM,2,2)
+    MAKE_OPP(0xAE,LDX,ABS,4,3)
+    MAKE_OPP(0xA6,LDX,ZP,3,2)
+    MAKE_OPP(0xBE,LDX,ABY,4,3)
+    MAKE_OPP(0xB6,LDX,ZPY,4,2)
+    //endregion
+    //region LDY
+    //Load index register y from memory
+    MAKE_OPP(0xA0,LDY,IMM,2,2)
+    MAKE_OPP(0xAC,LDY,ABS,4,3)
+    MAKE_OPP(0xA4,LDY,ZP,3,2)
+    MAKE_OPP(0xB4,LDY,ZPX,4,2)
+    MAKE_OPP(0xBC,LDY,ABX,4,3)
+    //endregion
+    //region STX
+    //Store index register x in memory
+    MAKE_OPP(0x8E,STX,ABS,4,3)
+    MAKE_OPP(0x86,STX,ZP,3,2)
+    MAKE_OPP(0x96,STX,ZPY,4,2)
+    //endregion
+    //region STY
+    //Store index register y in memory
+    MAKE_OPP(0x8C,STY,ABS,4,3)
+    MAKE_OPP(0x86,STY,ZP,3,2)
+    MAKE_OPP(0x94,STY,ZPX,4,2)
+    //endregion
+    MAKE_OPP(0xE8,INX,IMP,2,1)//INX Increment X
+    MAKE_OPP(0xC8,INY,IMP,2,1)//INY Increment Y
+    MAKE_OPP(0xCA,DEX,IMP,2,1)//DEX Decrement X
+    MAKE_OPP(0x88,DEY,IMP,2,1)//DEY Decrement Y
+
+    //region CPX - Compare X with Memory
+    MAKE_OPP(0xE0,CPX,IMM,2,2)//CPX
+    MAKE_OPP(0xEC,CPX,ABS,4,3)//CPY
+    MAKE_OPP(0xE4,CPX,ZP,3,2)
+    //endregion
+    //region CPY - Compare Y with Memory
+    MAKE_OPP(0xC0,CPY,IMM,2,2)
+    MAKE_OPP(0xCC,CPY,ABS,4,3)
+    MAKE_OPP(0xC4,CPY,ZP,3,2)
+    //endregion
+
+    //TAX, TXA, TAY, TYA,
+    MAKE_OPP(0xAA,TAX,IMP,2,1)
+    MAKE_OPP(0x8A,TXA,IMP,2,1)
+    MAKE_OPP(0xAB,TAY,IMP,2,1)
+    MAKE_OPP(0x98,TYA,IMP,2,1)
+    //endregion
+    //region Stack Processing
+    //endregion
+
 };
 
 //Addressing mode vars
@@ -341,7 +427,99 @@ void mos6502::OP_BIT(uint8_t *m) {
 
 //endregion
 
+//region Index Register
+void mos6502::OP_LDX(uint8_t *m) {
+    X = *m;
+    SET_ZERO(X);
+    SET_NEGATIVE(X);
+}
+
+void mos6502::OP_LDY(uint8_t *m) {
+    Y = *m;
+    SET_ZERO(Y);
+    SET_NEGATIVE(Y);
+}
+
+void mos6502::OP_STX(uint8_t *m) {
+    *m = X;
+}
+
+void mos6502::OP_STY(uint8_t *m) {
+    *m = Y;
+}
+
+void mos6502::OP_INX(uint8_t *m) {
+    X += 1;
+    SET_NEGATIVE(X);
+    SET_ZERO(X);
+}
+
+void mos6502::OP_INY(uint8_t *m) {
+    Y += 1;
+    SET_NEGATIVE(Y);
+    SET_ZERO(Y);
+}
+
+void mos6502::OP_DEX(uint8_t *m) {
+    X -= 1;
+    SET_NEGATIVE(X);
+    SET_ZERO(X);
+}
+
+void mos6502::OP_DEY(uint8_t *m) {
+    Y -= 1;
+    SET_NEGATIVE(Y);
+    SET_ZERO(Y);
+}
+
+void mos6502::OP_CPX(uint8_t *m) {
+    result = X-*m;
+    SET_ZERO(result);
+    SET_NEGATIVE(result);
+    SET_FLAG(FLAG_C,X>=*m);
+}
+
+void mos6502::OP_CPY(uint8_t *m) {
+    result = Y-*m;
+    SET_ZERO(result);
+    SET_NEGATIVE(result);
+    SET_FLAG(FLAG_C,Y>=*m);
+}
+
+void mos6502::OP_TAX(uint8_t *m) {
+    X = A;
+    SET_ZERO(X);
+    SET_NEGATIVE(X);
+}
+
+void mos6502::OP_TXA(uint8_t *m) {
+    A = X;
+    SET_ZERO(A);
+    SET_NEGATIVE(A);
+}
+
+void mos6502::OP_TAY(uint8_t *m) {
+    Y = A;
+    SET_ZERO(Y);
+    SET_NEGATIVE(Y);
+}
+
+void mos6502::OP_TYA(uint8_t *m) {
+    A = Y;
+    SET_ZERO(A);
+    SET_NEGATIVE(A);
+}
+//endregion
+
+
+
 int main() {
-    mos6502 cpu;
+    std::cout << "HI" << std::endl;
+    std::cout << std::filesystem::current_path() << std::endl;
+    uint8_t byte;
+    std::ifstream file("ROMS/test", std::ios::binary);
+    while (file.read(reinterpret_cast<char*>(&byte),1)) {
+        std::cout << static_cast<int>(byte) << " ";
+    }
     return 0;
 }
