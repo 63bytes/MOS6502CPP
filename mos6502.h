@@ -157,6 +157,15 @@ private:
     OPCODE_F OP_TXA;
     OPCODE_F OP_TAY;
     OPCODE_F OP_TYA;
+
+    OPCODE_F OP_JSR;
+    OPCODE_F OP_RTS;
+    OPCODE_F OP_PHA;
+    OPCODE_F OP_PLA;
+    OPCODE_F OP_TXS;
+    OPCODE_F OP_TSX;
+    OPCODE_F OP_PHP;
+    OPCODE_F OP_PLP;
 };
 
 #endif //MOS6502

@@ -243,7 +243,8 @@ uint8_t* mos6502::Addr_IMM() {
 }
 
 uint8_t* mos6502::Addr_ABS() {
-    return &RAM[fetch16];//Pointer to RAM value
+    AD = fetch16;
+    return &RAM[AD];//Pointer to RAM value
 }
 
 uint8_t* mos6502::Addr_ZP() {
@@ -511,7 +512,41 @@ void mos6502::OP_TYA(uint8_t *m) {
 }
 //endregion
 
+//region Stack Processing
+void mos6502::OP_JSR(uint8_t *m) {
+    STACK_PUSH_16(PC)
+    PC = AD;
+}
 
+void mos6502::OP_RTS(uint8_t *m) {
+    PC = STACK_PULL_16;
+}
+
+void mos6502::OP_PHA(uint8_t *m) {
+    STACK_PUSH(A);
+}
+
+void mos6502::OP_PLA(uint8_t *m) {
+    A = STACK_PULL();
+}
+
+void mos6502::OP_TXS(uint8_t *m) {
+    SP = X;
+}
+
+void mos6502::OP_TSX(uint8_t *m) {
+    X = SP;
+}
+
+void mos6502::OP_PHP(uint8_t *m) {
+    STACK_PUSH(P);
+}
+
+void mos6502::OP_PLP(uint8_t *m) {
+    P = STACK_PULL();
+}
+
+//endregion
 
 int main() {
     std::cout << "HI" << std::endl;
