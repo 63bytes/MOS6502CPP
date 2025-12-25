@@ -70,9 +70,9 @@ private:
     uint8_t OP=0;
 
     //Custom types
-    typedef void OPCODE_F(uint8_t* m);
-    using OPCODE_FP = void(mos6502::*)(uint8_t*);
-    using ADDR_FP = uint8_t*(mos6502::*)();
+    typedef void OPCODE_F();
+    using OPCODE_FP = void(mos6502::*)();
+    using ADDR_FP = void(mos6502::*)();
 
     //Instruction table
     struct INSTR {
@@ -98,19 +98,19 @@ private:
 #define SIGN_VAL_8(v) (((v&UINT8_S)==UINT8_S) ? ~v+1 : v)
 
     //Addressing mode handler
-    uint8_t* Addr_IMM();
-    uint8_t* Addr_ABS();
-    uint8_t* Addr_ZP();
-    uint8_t* Addr_ACC();
-    uint8_t* Addr_IMP();
-    uint8_t* Addr_INDX();
-    uint8_t* Addr_INDY();
-    uint8_t* Addr_ZPX();
-    uint8_t* Addr_ABX();
-    uint8_t* Addr_ABY();
-    uint8_t* Addr_REL();
-    uint8_t* Addr_IND();
-    uint8_t* Addr_ZPY();
+    void Addr_IMM();
+    void Addr_ABS();
+    void Addr_ZP();
+    void Addr_ACC();
+    void Addr_IMP();
+    void Addr_INDX();
+    void Addr_INDY();
+    void Addr_ZPX();
+    void Addr_ABX();
+    void Addr_ABY();
+    void Addr_REL();
+    void Addr_IND();
+    void Addr_ZPY();
 
     //opcode functions
     OPCODE_F OP_ILLEGAL;

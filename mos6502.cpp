@@ -51,11 +51,12 @@ mos6502::mos6502() {
     CYCLES,\
     SIZE\
     );
-
+    instr_table[0xA9] = INSTR(0xA9, &mos6502::OP_LDA, &mos6502::Addr_IMM, 2, 2 );
     //Illegal opcodes
     for (int i = 0; i < 0xff; i++) {
-        instr_table[i] = INSTR(i, &mos6502::OP_ILLEGAL, &mos6502::Addr_IMP, 1, 1);;
+        instr_table[i] = INSTR(i, &mos6502::OP_ILLEGAL, &mos6502::Addr_IMP, 1, 1);
     }
+
     //region Arith
     //region LDA
     //Data bus, Accumulator, Arithmetic unit
@@ -233,98 +234,99 @@ uint8_t IAL; //indirect address low
 uint8_t ADL; //Adress low
 uint8_t ADH; //Adress high
 uint16_t AD;
+uint16_t effectiveAddress;
 
 uint8_t opVal;
+uint8_t* operand;
 
 //region Adressing mode handlers
-uint8_t* mos6502::Addr_IMM() {
+void mos6502::Addr_IMM() {
     opVal = fetch();//Does not effect RAM
-    return &opVal;//pointer to varible
+    operand = &opVal;//pointer to varible
 }
 
-uint8_t* mos6502::Addr_ABS() {
+void mos6502::Addr_ABS() {
     AD = fetch16;
-    return &RAM[AD];//Pointer to RAM value
+    operand = &RAM[AD];//Pointer to RAM value
 }
 
-uint8_t* mos6502::Addr_ZP() {
-    return &RAM[fetch()];//Pointer to Zero page value
+void mos6502::Addr_ZP() {
+    operand = &RAM[fetch()];//Pointer to Zero page value
 }
 
-uint8_t* mos6502::Addr_ACC() {
-    return &A;//Pointer to Accumulator varible
+void mos6502::Addr_ACC() {
+    operand = &A;//Pointer to Accumulator varible
 }
 
-uint8_t* mos6502::Addr_IMP() {
-    return &opVal;
+void mos6502::Addr_IMP() {
+    operand = &opVal;
 }
 
-uint8_t* mos6502::Addr_INDX() {//list of pointers
+void mos6502::Addr_INDX() {//list of pointers
     AD = read16(fetch()+X);//get zero page ADDRESS+X
-    return &RAM[AD];
+    operand = &RAM[AD];
 }
 
-uint8_t* mos6502::Addr_INDY() {
+void mos6502::Addr_INDY() {
     AD = read16(fetch());//get address from zero page
     AD += X;//add X to address
-    return &RAM[AD];//get value
+    operand = &RAM[AD];//get value
 }
 
-uint8_t* mos6502::Addr_ZPX() {
-    return &RAM[fetch()+X];
+void mos6502::Addr_ZPX() {
+    operand = &RAM[fetch()+X];
 }
 
-uint8_t* mos6502::Addr_ABX() {
-    return &RAM[fetch16+X];
+void mos6502::Addr_ABX() {
+    operand = &RAM[fetch16+X];
 }
 
-uint8_t* mos6502::Addr_ABY() {
-    return &RAM[fetch16+X];
+void mos6502::Addr_ABY() {
+    operand = &RAM[fetch16+X];
 }
 
-uint8_t* mos6502::Addr_REL() {
+void mos6502::Addr_REL() {
     opVal = fetch();
-    return &opVal;
+    operand = &opVal;
 }
 
-uint8_t* mos6502::Addr_IND() {
-    return &RAM[fetch16];
+void mos6502::Addr_IND() {
+    operand = &RAM[fetch16];
 }
 
-uint8_t* mos6502::Addr_ZPY() {
-    return &RAM[fetch()+Y];
+void mos6502::Addr_ZPY() {
+    operand = &RAM[fetch()+Y];
 }
 //endregion
 //Instructions
-void mos6502::OP_ILLEGAL(uint8_t *) {}
+void mos6502::OP_ILLEGAL() {}
 
 uint8_t last;
 int result;
 
 //region Arithmetic Unit
-void mos6502::OP_LDA(uint8_t* m) {
-    A = *m;
+void mos6502::OP_LDA() {
+    A = *operand;
     SET_ZERO(A);
     SET_NEGATIVE(A);
 }
 
-void mos6502::OP_STA(uint8_t* m) {
-    *m = A;
-
+void mos6502::OP_STA() {
+    *operand = A;
 }
-void mos6502::OP_ADC(uint8_t* m) {
+void mos6502::OP_ADC() {
   //  (D) ? SET_CARRY_DEC(A) : SET_CARRY(A,*m);
     std::cout << "[EXECUTE] ADC" << std::endl;
-    D ? SET_CARRY_DEC((A+*m)) : SET_CARRY(A+*m);
+    D ? SET_CARRY_DEC((A+*operand)) : SET_CARRY(A+*operand);
     last = A;
-    A += *m;
+    A += *operand;
     SET_OVERFLOW(last,A);
     SET_NEGATIVE(A);
     SET_ZERO(A);
 }
 
-void mos6502::OP_SBC(uint8_t* m) {
-    result = A + ~*m+C;
+void mos6502::OP_SBC() {
+    result = A + ~*operand+C;
     A = result;
     SET_FLAG(FLAG_C,(result>=0));
     SET_FLAG(FLAG_V, (result>127 or result<127));
@@ -332,180 +334,180 @@ void mos6502::OP_SBC(uint8_t* m) {
     SET_ZERO(A);
 }
 
-void mos6502::OP_AND(uint8_t* m) {
-    A &= *m;
+void mos6502::OP_AND() {
+    A &= *operand;
     SET_ZERO(A);
     SET_NEGATIVE(A);
 }
 
-void mos6502::OP_ORA(uint8_t* m) {
-    A |= *m;
+void mos6502::OP_ORA() {
+    A |= *operand;
     SET_ZERO(A);
     SET_NEGATIVE(A);
 }
 
-void mos6502::OP_EOR(uint8_t* m) {
-    A ^= *m;
+void mos6502::OP_EOR() {
+    A ^= *operand;
     SET_ZERO(A);
     SET_NEGATIVE(A);
 }
 //endregion
 
 //region Flags
-void mos6502::OP_SEC(uint8_t *m) {
+void mos6502::OP_SEC() {
     SET_FLAG(FLAG_C,true);
 }
 
-void mos6502::OP_CLC(uint8_t *m) {
+void mos6502::OP_CLC() {
     SET_FLAG(FLAG_C,false);
 }
 
-void mos6502::OP_SEI(uint8_t *m) {
+void mos6502::OP_SEI() {
     SET_FLAG(FLAG_I,true);
 }
 
-void mos6502::OP_CLI(uint8_t *m) {
+void mos6502::OP_CLI() {
     SET_FLAG(FLAG_I,false);
 }
 
-void mos6502::OP_SED(uint8_t *m) {
+void mos6502::OP_SED() {
     SET_FLAG(FLAG_D,true);
 }
 
-void mos6502::OP_CLD(uint8_t *m) {
+void mos6502::OP_CLD() {
     SET_FLAG(FLAG_D,false);
 }
 
-void mos6502::OP_CLV(uint8_t *m) {
+void mos6502::OP_CLV() {
     SET_FLAG(FLAG_V,false);
 }
 //endregion
 
 //region Branch and Test
-void mos6502::OP_JMP(uint8_t *m) {
-    PC = *m;
+void mos6502::OP_JMP() {
+    PC = *operand;
 }
-#define BRANCH PC+=static_cast<int8_t>(*m);
+#define BRANCH PC+=static_cast<int8_t>(*operand);
 
-void mos6502::OP_BMI(uint8_t *m) {
+void mos6502::OP_BMI() {
     if (N) {BRANCH}
 }
-void mos6502::OP_BPL(uint8_t *m) {
+void mos6502::OP_BPL() {
     if (not N) {BRANCH}
 }
 
-void mos6502::OP_BCC(uint8_t *m) {
+void mos6502::OP_BCC() {
     if (not C) {BRANCH}
 }
-void mos6502::OP_BCS(uint8_t *m) {
+void mos6502::OP_BCS() {
     if (C) {BRANCH}
 }
-void mos6502::OP_BEQ(uint8_t *m) {
+void mos6502::OP_BEQ() {
     if (Z) {BRANCH}
 }
-void mos6502::OP_BNE(uint8_t *m) {
+void mos6502::OP_BNE() {
     if  (not Z) {BRANCH}
 }
-void mos6502::OP_BVS(uint8_t *m) {
+void mos6502::OP_BVS() {
     if (V) {BRANCH}
 }
-void mos6502::OP_BVC(uint8_t *m) {
+void mos6502::OP_BVC() {
     if (not V) {BRANCH}
 }
 
-void mos6502::OP_CMP(uint8_t *m) {
-    result = A-*m;
+void mos6502::OP_CMP() {
+    result = A-*operand;
     SET_ZERO(result);
     SET_NEGATIVE(result);
-    SET_FLAG(FLAG_C,*m<=A);
+    SET_FLAG(FLAG_C,*operand<=A);
 }
 
-void mos6502::OP_BIT(uint8_t *m) {
-    result = A & *m;
-    SET_NEGATIVE(*m);
-    SET_FLAG(FLAG_V,(*m&FLAG_V)==FLAG_V);
+void mos6502::OP_BIT() {
+    result = A & *operand;
+    SET_NEGATIVE(*operand);
+    SET_FLAG(FLAG_V,(*operand&FLAG_V)==FLAG_V);
 }
 
 //endregion
 
 //region Index Register
-void mos6502::OP_LDX(uint8_t *m) {
-    X = *m;
+void mos6502::OP_LDX() {
+    X = *operand;
     SET_ZERO(X);
     SET_NEGATIVE(X);
 }
 
-void mos6502::OP_LDY(uint8_t *m) {
-    Y = *m;
+void mos6502::OP_LDY() {
+    Y = *operand;
     SET_ZERO(Y);
     SET_NEGATIVE(Y);
 }
 
-void mos6502::OP_STX(uint8_t *m) {
-    *m = X;
+void mos6502::OP_STX() {
+    *operand = X;
 }
 
-void mos6502::OP_STY(uint8_t *m) {
-    *m = Y;
+void mos6502::OP_STY() {
+    *operand = Y;
 }
 
-void mos6502::OP_INX(uint8_t *m) {
+void mos6502::OP_INX() {
     X += 1;
     SET_NEGATIVE(X);
     SET_ZERO(X);
 }
 
-void mos6502::OP_INY(uint8_t *m) {
+void mos6502::OP_INY() {
     Y += 1;
     SET_NEGATIVE(Y);
     SET_ZERO(Y);
 }
 
-void mos6502::OP_DEX(uint8_t *m) {
+void mos6502::OP_DEX() {
     X -= 1;
     SET_NEGATIVE(X);
     SET_ZERO(X);
 }
 
-void mos6502::OP_DEY(uint8_t *m) {
+void mos6502::OP_DEY() {
     Y -= 1;
     SET_NEGATIVE(Y);
     SET_ZERO(Y);
 }
 
-void mos6502::OP_CPX(uint8_t *m) {
-    result = X-*m;
+void mos6502::OP_CPX() {
+    result = X-*operand;
     SET_ZERO(result);
     SET_NEGATIVE(result);
-    SET_FLAG(FLAG_C,X>=*m);
+    SET_FLAG(FLAG_C,X>=*operand);
 }
 
-void mos6502::OP_CPY(uint8_t *m) {
-    result = Y-*m;
+void mos6502::OP_CPY() {
+    result = Y-*operand;
     SET_ZERO(result);
     SET_NEGATIVE(result);
-    SET_FLAG(FLAG_C,Y>=*m);
+    SET_FLAG(FLAG_C,Y>=*operand);
 }
 
-void mos6502::OP_TAX(uint8_t *m) {
+void mos6502::OP_TAX() {
     X = A;
     SET_ZERO(X);
     SET_NEGATIVE(X);
 }
 
-void mos6502::OP_TXA(uint8_t *m) {
+void mos6502::OP_TXA() {
     A = X;
     SET_ZERO(A);
     SET_NEGATIVE(A);
 }
 
-void mos6502::OP_TAY(uint8_t *m) {
+void mos6502::OP_TAY() {
     Y = A;
     SET_ZERO(Y);
     SET_NEGATIVE(Y);
 }
 
-void mos6502::OP_TYA(uint8_t *m) {
+void mos6502::OP_TYA() {
     A = Y;
     SET_ZERO(A);
     SET_NEGATIVE(A);
@@ -513,42 +515,43 @@ void mos6502::OP_TYA(uint8_t *m) {
 //endregion
 
 //region Stack Processing
-void mos6502::OP_JSR(uint8_t *m) {
+void mos6502::OP_JSR() {
     STACK_PUSH_16(PC)
     PC = AD;
 }
 
-void mos6502::OP_RTS(uint8_t *m) {
+void mos6502::OP_RTS() {
     PC = STACK_PULL_16;
 }
 
-void mos6502::OP_PHA(uint8_t *m) {
+void mos6502::OP_PHA() {
     STACK_PUSH(A);
 }
 
-void mos6502::OP_PLA(uint8_t *m) {
+void mos6502::OP_PLA() {
     A = STACK_PULL();
 }
 
-void mos6502::OP_TXS(uint8_t *m) {
+void mos6502::OP_TXS() {
     SP = X;
 }
 
-void mos6502::OP_TSX(uint8_t *m) {
+void mos6502::OP_TSX() {
     X = SP;
 }
 
-void mos6502::OP_PHP(uint8_t *m) {
+void mos6502::OP_PHP() {
     STACK_PUSH(P);
 }
 
-void mos6502::OP_PLP(uint8_t *m) {
+void mos6502::OP_PLP() {
     P = STACK_PULL();
 }
 
 //endregion
 
 int main() {
+    mos6502 cpu;
     std::cout << "HI" << std::endl;
     std::cout << std::filesystem::current_path() << std::endl;
     uint8_t buffer[255];
