@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <fstream>
 #include <filesystem>
+#include "font.h"
 
 #define LWHG_CMB(l,h) ((h<<8)|l)
 
@@ -26,23 +27,12 @@ uint8_t mos6502::fetch() {
 void mos6502::execute() {
     OP = fetch();
     OPData = instr_table[OP];
-    (this->*OPData.op_func)((this->*OPData.addr_func)());
+    (this->*OPData.addr_func)();
+    (this->*OPData.op_func)();
 }
 
 mos6502::mos6502() {
-    RAM[0x0200] = 0x69;
-    RAM[0x0201] = 0x50;
-    RAM[0x0202] = 0x69;
-    RAM[0x0203] = 0x50;
-    RAM[0x0204] = 0x69;
-    RAM[0x0205] = 0x50;
-    RAM[0x0206] = 0x69;
-    RAM[0x0207] = 0x50;
-    RAM[0x0208] = 0x69;
-    RAM[0x0209] = 0x50;
-    RAM[0x020A] = 0x69;
-    RAM[0x020B] = 0x50;
-
+    //region Instruction table
 #define MAKE_OPP(HEX,OP_FUNC, ADDR_FUNC, CYCLES, SIZE)\
     instr_table[HEX] = INSTR(\
     HEX,\
@@ -225,8 +215,41 @@ mos6502::mos6502() {
     MAKE_OPP(0x98,TYA,IMP,2,1)
     //endregion
     //region Stack Processing
+    MAKE_OPP(0x20,JSR,ABS,6,3)//JSR
+    MAKE_OPP(0x60,RTS,IMP,6,1)//RTS
+    MAKE_OPP(0x48,PHA,IMP,3,1)//PHA
+    MAKE_OPP(0x68,PLA,IMP,4,1)//PLA
+    MAKE_OPP(0x9A,TXS,IMP,2,1)//TXS
+    MAKE_OPP(0xBA,TSX,IMP,2,1)//TSX
+    MAKE_OPP(0x08,PHP,IMP,3,1)//PHP
+    MAKE_OPP(0x28,PLP,IMP,4,1)//PLP
+    //endregion
+    //region Shifts
+
+    //LSR
+    MAKE_OPP(0x4E,LSR,ABS,6,3)
+    MAKE_OPP(0xA6,LSR,ZP,5,2)
+    MAKE_OPP(0xA4,LSR,ACC,2,1)
+    MAKE_OPP(0x56,LSR,ZPX,6,2)
+    MAKE_OPP(0x5E,LSR,ABX,7,3)
+
+    //ASL
+    MAKE_OPP(0x0E,ASL,ABS,6,3)
+    MAKE_OPP(0x06,ASL,ZP,5,2)
+    MAKE_OPP(0x0A,ASL,ACC,2,1)
+    MAKE_OPP(0x16,ASL,ZPX,6,2)
+    MAKE_OPP(0x1E,ASL,ABX,7,3)
+
+    //endregion
     //endregion
 
+    std::cout << std::filesystem::current_path() << std::endl;
+    uint8_t buffer[255];
+    std::ifstream file("ROMS/test", std::ios::binary);
+    file.read(reinterpret_cast<char*>(&buffer),sizeof(buffer));
+    for (int i=0;i<sizeof(buffer);i++) {
+        RAM[PROGRAM_START+i] = buffer[i];
+    }
 };
 
 //Addressing mode vars
@@ -550,15 +573,40 @@ void mos6502::OP_PLP() {
 
 //endregion
 
-int main() {
-    mos6502 cpu;
-    std::cout << "HI" << std::endl;
-    std::cout << std::filesystem::current_path() << std::endl;
-    uint8_t buffer[255];
-    std::ifstream file("ROMS/test", std::ios::binary);
-    file.read(reinterpret_cast<char*>(&buffer),1);
-    for (int i=0;i<sizeof(buffer);i++) {
-        std::cout << static_cast<int>(buffer[i]) << std::endl;
+//region Shift and Memory modify
+void mos6502::OP_LSR() {
+    SET_FLAG(FLAG_C,GET_BIT(*operand,0));
+    *operand>>=1;
+    SET_NEGATIVE(*operand);
+    SET_ZERO(*operand);
+}
+
+void mos6502::OP_ASL() {
+    SET_FLAG(FLAG_C,GET_BIT(*operand,7));
+    *operand>>=1;
+    SET_NEGATIVE(*operand);
+    SET_ZERO(*operand);
+}
+
+//endregion
+
+#define FULL_BLOCK "\u2588"
+#define SPACE " "
+
+void printTextConsoleLarge(const unsigned char t[8]) {
+    for (int x = 0;x<7;x++) {
+        for (int y = 8; not (y<0); y--) {
+            if ((t[x]&(2<<y))==((2<<y))) {
+                std::cout << FULL_BLOCK << FULL_BLOCK;
+            } else {
+                std::cout << SPACE << SPACE;
+            }
+        }
+        std::cout << std::endl;
     }
+}
+
+int main() {
+    printTextConsoleLarge(FONT_STORE[3]);
     return 0;
 }

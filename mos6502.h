@@ -6,11 +6,18 @@
 constexpr int HIGH = 0xff00;
 constexpr int LOW = UINT8_MAX;
 constexpr int UINT8_S = 0b10000000;
+constexpr uint8_t LSB = 0b00000001;
+constexpr uint8_t MSB = 0b10000000;
 
 constexpr int MEMORY_MAX = 0xffff;
 constexpr int STACK_PAGE = 0x0100;
 constexpr int STACK_START = UINT8_MAX;
 constexpr int PROGRAM_START = 0x0200;
+
+constexpr int SCREEN_WIDTH = 320;
+constexpr int SCREEN_HEIGHT = 200;
+constexpr int SCREEN_TEXT_WIDTH = 40;
+constexpr int SCREEN_TEXT_HEIGHT = 25;
 
 constexpr uint8_t FLAG_N = 0b10000000;
 constexpr uint8_t FLAG_V = 0b01000000;
@@ -19,6 +26,8 @@ constexpr uint8_t FLAG_D = 0b00001000;
 constexpr uint8_t FLAG_I = 0b00000100;
 constexpr uint8_t FLAG_Z = 0b00000010;
 constexpr uint8_t FLAG_C = 0b00000001;
+
+#define GET_BIT(v,b) ((v>>b)&LSB)
 
 class mos6502 {
 public:
@@ -68,6 +77,9 @@ private:
     uint16_t PC=PROGRAM_START;
 
     uint8_t OP=0;
+
+    //screen
+    uint8_t screenBuffer[25][40];
 
     //Custom types
     typedef void OPCODE_F();
@@ -166,6 +178,13 @@ private:
     OPCODE_F OP_TSX;
     OPCODE_F OP_PHP;
     OPCODE_F OP_PLP;
+
+    OPCODE_F OP_LSR;
+    OPCODE_F OP_ASL;
+    OPCODE_F OP_ROL;
+    OPCODE_F OP_ROR;
+    OPCODE_F OP_INC;
+    OPCODE_F OP_DEC;
 };
 
 #endif //MOS6502
